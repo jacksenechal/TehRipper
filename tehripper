@@ -1,0 +1,92 @@
+#!/usr/bin/ruby
+# Jack's tehripper, v0.1
+
+require 'rubygems'
+require 'commander/import'
+
+program :version, "0.1"
+program :description, "A program to batch read/write raw CD audio or CD/DVD data for backup"
+default_command :help
+
+command :"read-audio" do |c|
+  c.syntax = 'read-audio [options]'
+  c.description = 'Reads audio data from CD to new local directory, eg. "./cd1/"'
+  c.option '--start n', Integer, 'The starting number for directory naming (defaults to 1)'
+  c.option '--end n', Integer, 'The ending number for directory naming (defaults to 1)'
+  c.option '--prefix string', String, 'The prefix for the directory name (defaults to "cd")'
+  c.when_called do|args, options|
+    options.default :start => 1, :end => 1, :prefix => 'cd'
+    loop_on_name("reading", options.start, options.end, options.prefix) { |name|
+      `mkdir #{name}`
+      `cdrdao read-cd --device 0,0,0 --datafile #{name}/data.bin #{name}/cd.toc && eject /dev/sr0`
+    }
+  end
+end
+
+command :"write-audio" do |c|
+  c.syntax = 'write-audio [options]'
+  c.description = 'Writes audio data to CD from local directory, eg. "./cd1/"'
+  c.option '--start n', Integer, 'The starting number for directory naming (defaults to 1)'
+  c.option '--end n', Integer, 'The ending number for directory naming (defaults to 1)'
+  c.option '--prefix string', String, 'The prefix for the directory name (defaults to "cd")'
+  c.when_called do|args, options|
+    options.default :start => 1, :end => 1, :prefix => 'cd'
+    loop_on_name("writing", options.start, options.end, options.prefix) { |name|
+      `cdrdao write -n --device 0,0,0 --datafile #{name}/data.bin --eject #{name}/cd.toc`
+    }
+  end
+end
+
+command :"read-iso" do |c|
+  c.syntax = 'read-iso [options]'
+  c.description = 'Reads DVD image to working directory, eg. "./dvd1.iso"'
+  c.option '--start n', Integer, 'The starting number for image file naming (defaults to 1)'
+  c.option '--end n', Integer, 'The ending number for image file naming (defaults to 1)'
+  c.option '--prefix string', String, 'The prefix for the image file name (defaults to "dvd")'
+  c.when_called do|args, options|
+    options.default :start => 1, :end => 1, :prefix => 'dvd'
+    loop_on_name("reading", options.start, options.end, options.prefix) { |name|
+      `dd if=/dev/sr0 of=#{name}.iso && eject /dev/sr0`
+    }
+  end
+end
+
+command :"write-iso" do |c|
+  c.syntax = 'write-iso [options]'
+  c.description = 'Writes DVD image from working directory, eg. "./dvd1.iso"'
+  c.option '--start n', Integer, 'The starting number for image file naming (defaults to 1)'
+  c.option '--end n', Integer, 'The ending number for image file naming (defaults to 1)'
+  c.option '--prefix string', String, 'The prefix for the image file name (defaults to "dvd")'
+  c.when_called do|args, options|
+    options.default :start => 1, :end => 1, :prefix => 'dvd'
+    loop_on_name("writing", options.start, options.end, options.prefix) { |name|
+      `cdrecord -eject -data #{name}.iso`
+    }
+  end
+end
+
+def loop_on_name(op_name, startnum, endnum, prefix)
+  cutoff = 180 # Allows for roughly 30 minutes of screwups before aborting
+  num = startnum
+  endnum = num if num > endnum
+  loopnum = 0
+  endloopnum = endnum > cutoff ? endnum : cutoff 
+  begin
+    name = "#{prefix}#{num}"
+    jp "Begin #{op_name} #{name}"
+    yield(name)
+    if $? == 0
+      jp "Successfully completed #{op_name} #{name}"
+      num += 1 
+    else
+      jp "ERROR: Could not complete operation. Please check the disc."
+      sleep 10
+      jp "Trying again...\n"
+    end
+    loopnum += 1
+  end until num > endnum or loopnum > endloopnum
+end
+
+def jp(str)
+  puts "#{program :name}: #{str}\n"
+end
