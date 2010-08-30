@@ -13,8 +13,8 @@ The program relies on the following command line utilities, as well as Ruby and 
 USING IT
 ========
 
-  tehripper - gives you a list of available commands
-  tehripper help <command> - gives you help on the options for a specific command
+`tehripper` - gives you a list of available commands  
+`tehripper help <command>` - gives you help on the options for a specific command
 
 TODO LIST
 =========
