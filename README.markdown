@@ -25,6 +25,7 @@ Critical:
 
 Cool additions:
 
+* Re-factor the individual command options out to universal options, since they're all the same
 * Read CDDB database (cdrdao may be able to do this), and name the files accordingly
 * Rip to FLAC option (or mp3, if you care for lossy music...)
 * More compact command line syntax, like `tehripper read-audio 1:14 schmorgtunes`  
